@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The bubble &mdash; World Cup third-place tracker</title>
+<style>
+  :root{
+    --ink:#0d1117;
+    --paper:#f6f4ec;
+    --paper-dim:#ece8da;
+    --line:#d8d2bf;
+    --line-soft:#e4e0d2;
+    --green:#1c5c3f;
+    --green-deep:#0f3c28;
+    --red:#9c2b1f;
+    --amber:#a4671b;
+    --kr-blue:#003478;
+    --kr-red:#c60c30;
+    --mono:'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --serif:'Georgia', 'Iowan Old Style', 'Palatino', serif;
+    --sans:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.5;
+  }
+  a{color:inherit;}
+
+  /* ---------- masthead ---------- */
+  .masthead{
+    border-bottom:3px solid var(--ink);
+    padding:14px 20px 10px;
+    max-width:920px;
+    margin:0 auto;
+  }
+  .masthead-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:#5b5648;
+    border-bottom:1px solid var(--line);
+    padding-bottom:8px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .title-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  h1{
+    font-family:var(--serif);
+    font-weight:700;
+    font-size:clamp(32px,6vw,52px);
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  h1 em{
+    font-style:italic;
+    color:var(--green-deep);
+  }
+  .deck{
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:15px;
+    color:#3d3a30;
+    margin:4px 0 0;
+    max-width:560px;
+  }
+  .live-pill{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    padding:5px 10px;
+    border:1px solid var(--ink);
+    border-radius:2px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    white-space:nowrap;
+    background:var(--ink);
+    color:var(--paper);
+  }
+  .live-dot{
+    width:6px;height:6px;border-radius:50%;
+    background:#ff5b4d;
+    animation:pulse 1.6s infinite ease-in-out;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:0.25;}
+  }
+
+  main{max-width:920px;margin:0 auto;padding:0 20px 80px;}
+
+  /* ---------- KR focal block ---------- */
+  .kr-block{
+    margin-top:28px;
+    border:1px solid var(--ink);
+    background:var(--paper-dim);
+    position:relative;
+    overflow:hidden;
+  }
+  .kr-stripe{
+    position:absolute;
+    top:0;left:0;
+    width:6px;height:100%;
+    background:repeating-linear-gradient(180deg,var(--kr-blue) 0 10px,var(--kr-red) 10px 20px);
+  }
+  .kr-inner{
+    padding:22px 24px 22px 32px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:18px;
+    align-items:center;
+  }
+  .kr-label{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:#5b5648;
+    margin:0 0 4px;
+  }
+  .kr-name{
+    font-family:var(--serif);
+    font-size:28px;
+    font-weight:700;
+    margin:0 0 6px;
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  .kr-rank-badge{
+    font-family:var(--mono);
+    font-size:13px;
+    background:var(--green-deep);
+    color:var(--paper);
+    padding:2px 8px;
+    border-radius:2px;
+  }
+  .kr-sub{
+    font-size:14px;
+    color:#3d3a30;
+    margin:0;
+  }
+  .kr-stats{
+    display:flex;
+    gap:22px;
+    text-align:right;
+  }
+  .kr-stat-num{
+    font-family:var(--mono);
+    font-size:26px;
+    font-weight:700;
+    display:block;
+    line-height:1;
+  }
+  .kr-stat-cap{
+    font-family:var(--mono);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:#5b5648;
+  }
+
+  @media (max-width:640px){
+    .kr-inner{grid-template-columns:1fr;}
+    .kr-stats{justify-content:flex-start;text-align:left;}
+  }
+
+  /* ---------- section headers ---------- */
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin:44px 0 4px;
+  }
+  .section-num{
+    font-family:var(--mono);
+    font-size:13px;
+    color:#8a8472;
+  }
+  h2{
+    font-family:var(--serif);
+    font-size:22px;
+    margin:0;
+    font-weight:700;
+  }
+  .section-note{
+    font-size:13px;
+    color:#5b5648;
+    margin:0 0 18px;
+    max-width:600px;
+  }
+
+  /* ---------- third place table ---------- */
+  .tp-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+  }
+  .tp-table th{
+    font-family:var(--mono);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:#5b5648;
+    text-align:left;
+    padding:6px 8px;
+    border-bottom:1px solid var(--ink);
+    font-weight:400;
+  }
+  .tp-table th.num, .tp-table td.num{text-align:right;}
+  .tp-table td{
+    padding:11px 8px;
+    border-bottom:1px solid var(--line-soft);
+    vertical-align:middle;
+  }
+  .tp-table tr.kr-row{
+    background:var(--kr-blue);
+    color:#fff;
+  }
+  .tp-table tr.kr-row td{
+    border-bottom:1px solid var(--kr-blue);
+  }
+  .tp-table tr.cutoff-row td{
+    border-bottom:2px dashed var(--ink);
+    padding-bottom:4px;
+  }
+  .rank-num{
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:15px;
+  }
+  .team-cell{display:flex;align-items:center;gap:8px;}
+  .flag{font-size:18px;line-height:1;}
+  .team-name{font-weight:500;}
+  .group-tag{
+    font-family:var(--mono);
+    font-size:10px;
+    color:#8a8472;
+  }
+  .kr-row .group-tag{color:#c9d6ea;}
+  .status-chip{
+    font-family:var(--mono);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    padding:3px 7px;
+    border-radius:2px;
+    white-space:nowrap;
+    display:inline-block;
+  }
+  .st-final{background:#dde6dc;color:var(--green-deep);}
+  .st-live{background:#f6e2c2;color:var(--amber);}
+  .st-pending{background:var(--line-soft);color:#5b5648;}
+  .st-out{background:#ecd6d3;color:var(--red);}
+  .kr-row .st-final{background:rgba(255,255,255,0.18);color:#fff;}
+
+  .cutoff-label{
+    text-align:center;
+    font-family:var(--mono);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:#5b5648;
+    padding:6px 0 14px;
+  }
+
+  .legend-row{
+    display:flex;
+    gap:18px;
+    flex-wrap:wrap;
+    margin-top:14px;
+    font-size:12px;
+    color:#5b5648;
+  }
+  .legend-row span{display:inline-flex;align-items:center;gap:6px;}
+  .legend-swatch{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+  /* ---------- tiebreak ladder ---------- */
+  .ladder{
+    display:flex;
+    flex-direction:column;
+    gap:0;
+    margin-top:8px;
+  }
+  .ladder-step{
+    display:grid;
+    grid-template-columns:32px 1fr;
+    gap:14px;
+    padding:14px 0;
+    border-bottom:1px solid var(--line-soft);
+    align-items:baseline;
+  }
+  .ladder-step:last-child{border-bottom:none;}
+  .ladder-n{
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:20px;
+    color:#8a8472;
+  }
+  .ladder-title{font-weight:500;font-size:15px;margin:0 0 2px;}
+  .ladder-desc{font-size:13px;color:#5b5648;margin:0;}
+
+  /* ---------- group A recap ---------- */
+  .groupA{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:1px;
+    background:var(--ink);
+    border:1px solid var(--ink);
+    font-size:13px;
+    margin-top:8px;
+  }
+  .groupA-cell{
+    background:var(--paper);
+    padding:14px 12px;
+  }
+  .groupA-cell.head{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--mono);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    display:flex;
+    align-items:center;
+  }
+  .groupA-cell .gteam{font-weight:500;display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+  .groupA-cell .gpts{font-family:var(--mono);font-size:18px;font-weight:700;}
+  .groupA-cell .gd{font-family:var(--mono);font-size:11px;color:#5b5648;}
+  .groupA-cell.kr-cell{background:var(--kr-blue);color:#fff;}
+  .groupA-cell.kr-cell .gd{color:#c9d6ea;}
+  @media (max-width:640px){
+    .groupA{grid-template-columns:repeat(2,1fr);}
+  }
+
+  /* ---------- threats ---------- */
+  .threats{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-top:8px;
+  }
+  .threat{
+    display:grid;
+    grid-template-columns:90px 1fr auto;
+    gap:14px;
+    align-items:center;
+    padding:12px 14px;
+    border:1px solid var(--line);
+    background:#fff;
+  }
+  .threat-team{font-weight:500;font-size:14px;display:flex;align-items:center;gap:8px;}
+  .threat-note{font-size:12px;color:#5b5648;}
+  .threat-fixture{
+    font-family:var(--mono);
+    font-size:11px;
+    text-align:right;
+    color:#3d3a30;
+  }
+  @media (max-width:640px){
+    .threat{grid-template-columns:1fr;text-align:left;gap:4px;}
+    .threat-fixture{text-align:left;}
+  }
+
+  /* ---------- footer / refresh ---------- */
+  .refresh-block{
+    margin-top:48px;
+    border-top:3px solid var(--ink);
+    padding-top:20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .refresh-text{font-size:13px;color:#5b5648;max-width:480px;}
+  .refresh-btn{
+    font-family:var(--mono);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding:11px 18px;
+    cursor:pointer;
+    border-radius:2px;
+    white-space:nowrap;
+  }
+  .refresh-btn:hover{background:var(--green-deep);}
+  .refresh-btn:active{transform:scale(0.98);}
+  footer{
+    margin-top:30px;
+    font-family:var(--mono);
+    font-size:11px;
+    color:#8a8472;
+    text-align:center;
+    padding-bottom:10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-row">
+    <span>2026 FIFA World Cup &middot; Group stage, final matchday</span>
+    <span id="clock-line">Snapshot recorded June 25, 2026, evening (ET)</span>
+  </div>
+  <div class="title-row">
+    <div>
+      <h1>The <em>bubble</em></h1>
+      <p class="deck">Twelve teams finished third in their group. Eight advance. South Korea is one of them &mdash; for now.</p>
+    </div>
+    <span class="live-pill"><span class="live-dot"></span>4 groups still to finish</span>
+  </div>
+</div>
+
+<main>
+
+  <div class="kr-block">
+    <div class="kr-stripe"></div>
+    <div class="kr-inner">
+      <div>
+        <p class="kr-label">Group A &middot; finished</p>
+        <p class="kr-name">South Korea <span class="kr-rank-badge">6th of 12</span></p>
+        <p class="kr-sub">Lost the decider 1&ndash;0 to South Africa. Finished third in Group A on 3 points. Now waiting on seven other groups to find out if 3 points is enough.</p>
+      </div>
+      <div class="kr-stats">
+        <div>
+          <span class="kr-stat-num">3</span>
+          <span class="kr-stat-cap">Points</span>
+        </div>
+        <div>
+          <span class="kr-stat-num">&minus;1</span>
+          <span class="kr-stat-cap">Goal diff.</span>
+        </div>
+        <div>
+          <span class="kr-stat-num">2</span>
+          <span class="kr-stat-cap">Goals for</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <span class="section-num">01</span>
+    <h2>The third-place table</h2>
+  </div>
+  <p class="section-note">All 12 third-place finishers, ranked by points, then goal difference, then goals scored. The top 8 advance to the round of 32. Korea moved from 5th to 6th tonight after Sweden's draw with Japan pushed them ahead.</p>
+
+  <table class="tp-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Team</th>
+        <th class="num">Pts</th>
+        <th class="num">GD</th>
+        <th class="num">GF</th>
+        <th>Group status</th>
+      </tr>
+    </thead>
+    <tbody id="tp-body"></tbody>
+  </table>
+
+  <div class="legend-row">
+    <span><span class="legend-swatch" style="background:#1c5c3f"></span>Group finished, result locked</span>
+    <span><span class="legend-swatch" style="background:#a4671b"></span>Result just in, table updating</span>
+    <span><span class="legend-swatch" style="background:#8a8472"></span>Fixture still to play</span>
+    <span><span class="legend-swatch" style="background:#9c2b1f"></span>Eliminated</span>
+  </div>
+
+  <div class="section-head">
+    <span class="section-num">02</span>
+    <h2>What just happened</h2>
+  </div>
+  <p class="section-note">Japan 1&ndash;1 Sweden, played tonight in Arlington, Texas. The draw sent both teams through, Japan second in Group F, Sweden third. Because Sweden finished third with 4 points rather than 3, they jumped above South Korea in the third-place table.</p>
+
+  <div class="threats">
+    <div class="threat">
+      <div class="threat-fixture">Final &middot; Group F</div>
+      <div class="threat-team"><span class="flag">🇯🇵</span>Japan 1&ndash;1 Sweden 🇸🇪</div>
+      <div class="threat-note">Netherlands won the group, Japan 2nd, Sweden 3rd on 4 pts &mdash; now ranks above Korea.</div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <span class="section-num">03</span>
+    <h2>Group A, where Korea's story ended</h2>
+  </div>
+  <p class="section-note">Played June 11 to 24. Mexico won every match. South Africa's late win over Korea flipped second place.</p>
+
+  <div class="groupA">
+    <div class="groupA-cell head">Pos</div>
+    <div class="groupA-cell head">Team</div>
+    <div class="groupA-cell head">Pts</div>
+    <div class="groupA-cell head">Result</div>
+
+    <div class="groupA-cell"><span class="gteam">1st</span></div>
+    <div class="groupA-cell"><span class="gteam">🇲🇽 Mexico</span></div>
+    <div class="groupA-cell"><span class="gpts">9</span> <span class="gd">+6 GD</span></div>
+    <div class="groupA-cell">Perfect record, through</div>
+
+    <div class="groupA-cell"><span class="gteam">2nd</span></div>
+    <div class="groupA-cell"><span class="gteam">🇿🇦 South Africa</span></div>
+    <div class="groupA-cell"><span class="gpts">4</span> <span class="gd">&minus;1 GD</span></div>
+    <div class="groupA-cell">Won 1&ndash;0 vs. Korea, through</div>
+
+    <div class="groupA-cell kr-cell"><span class="gteam">3rd</span></div>
+    <div class="groupA-cell kr-cell"><span class="gteam">🇰🇷 South Korea</span></div>
+    <div class="groupA-cell kr-cell"><span class="gpts">3</span> <span class="gd" style="color:#c9d6ea">&minus;1 GD</span></div>
+    <div class="groupA-cell kr-cell">Lost decider, awaiting 3rd-place call</div>
+
+    <div class="groupA-cell"><span class="gteam">4th</span></div>
+    <div class="groupA-cell"><span class="gteam">🇨🇿 Czechia</span></div>
+    <div class="groupA-cell"><span class="gpts">1</span> <span class="gd">&minus;4 GD</span></div>
+    <div class="groupA-cell">Eliminated</div>
+  </div>
+
+  <div class="section-head">
+    <span class="section-num">04</span>
+    <h2>Who can still pass Korea</h2>
+  </div>
+  <p class="section-note">Korea's own group is done, so its fate is entirely in other teams' hands. These are the third-place contenders with fixtures left that could climb past or already have.</p>
+
+  <div class="threats" id="threats-body"></div>
+
+  <div class="section-head">
+    <span class="section-num">05</span>
+    <h2>How ties get broken</h2>
+  </div>
+  <p class="section-note">If two third-place teams finish level on points, FIFA works down this list until someone separates.</p>
+
+  <div class="ladder">
+    <div class="ladder-step">
+      <span class="ladder-n">1</span>
+      <div>
+        <p class="ladder-title">Points</p>
+        <p class="ladder-desc">Total points earned across all three group matches.</p>
+      </div>
+    </div>
+    <div class="ladder-step">
+      <span class="ladder-n">2</span>
+      <div>
+        <p class="ladder-title">Goal difference</p>
+        <p class="ladder-desc">Goals scored minus goals conceded in the group stage. This is where Korea (&minus;1) currently sits behind several rivals.</p>
+      </div>
+    </div>
+    <div class="ladder-step">
+      <span class="ladder-n">3</span>
+      <div>
+        <p class="ladder-title">Goals scored</p>
+        <p class="ladder-desc">If goal difference is also tied, total goals scored in the group breaks it.</p>
+      </div>
+    </div>
+    <div class="ladder-step">
+      <span class="ladder-n">4</span>
+      <div>
+        <p class="ladder-title">Team conduct score</p>
+        <p class="ladder-desc">Fewer yellow and red cards across the group stage ranks higher.</p>
+      </div>
+    </div>
+    <div class="ladder-step">
+      <span class="ladder-n">5</span>
+      <div>
+        <p class="ladder-title">FIFA World Ranking</p>
+        <p class="ladder-desc">Final resort. There's no drawing of lots in 2026, this replaces it.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="refresh-block">
+    <p class="refresh-text">This page is a snapshot, not a live feed. Four groups still have matches between now and June 27, and any one result can move Korea up or down. Use the button to pull the latest confirmed table.</p>
+    <button class="refresh-btn" onclick="if(window.sendPrompt){window.sendPrompt('Search the web for the latest World Cup third-place standings right now and tell me exactly where South Korea sits and what changed.')}else{alert('Ask Claude: what are the latest World Cup third-place standings and where does South Korea sit now?')}">Get tonight's update &rarr;</button>
+  </div>
+
+  <footer>Built for tracking South Korea's path to the round of 32 &middot; Source data: FIFA, group-stage results as reported June 25, 2026</footer>
+
+</main>
+
+<script>
+const data = [
+  {rank:1, group:'B', team:'Bosnia and Herzegovina', flag:'🇧🇦', pts:4, gd:-1, gf:5, status:'final', note:'Group finished. Beat Qatar 3-1 to finish third.'},
+  {rank:2, group:'F', team:'Sweden', flag:'🇸🇪', pts:4, gd:0, gf:6, status:'final', note:'Just finished. Drew 1-1 with Japan, finished third in Group F on 4 points.', justMoved:true},
+  {rank:3, group:'E', team:'Ecuador', flag:'🇪🇨', pts:4, gd:0, gf:2, status:'final', note:'Group finished. Beat Germany 2-1, already locked into the top 8.'},
+  {rank:4, group:'L', team:'Croatia', flag:'🇭🇷', pts:3, gd:-1, gf:3, status:'pending', note:'Plays Ghana June 27 in the Group L finale.'},
+  {rank:5, group:'D', team:'Paraguay', flag:'🇵🇾', pts:3, gd:-2, gf:2, status:'pending', note:'Plays Australia for second place in Group D.'},
+  {rank:6, group:'A', team:'South Korea', flag:'🇰🇷', pts:3, gd:-1, gf:2, status:'final', highlight:true, note:'Group A finished. Lost 1-0 to South Africa, finished third on 3 points.'},
+  {rank:7, group:'J', team:'Algeria', flag:'🇩🇿', pts:3, gd:-2, gf:2, status:'pending', note:'Plays Jordan June 27 in the Group J finale.'},
+  {rank:8, group:'C', team:'Scotland', flag:'🏴', pts:3, gd:-3, gf:1, status:'final', note:'Group C finished. Lost to Brazil, finished third on 3 points.'},
+  {rank:9, group:'H', team:'Cape Verde', flag:'🇨🇻', pts:2, gd:0, gf:2, status:'pending', note:'Plays Saudi Arabia June 26.'},
+  {rank:10, group:'G', team:'Belgium', flag:'🇧🇪', pts:2, gd:0, gf:1, status:'pending', note:'Plays New Zealand June 26.'},
+  {rank:11, group:'K', team:'DR Congo', flag:'🇨🇩', pts:1, gd:-1, gf:1, status:'pending', note:'Plays Uzbekistan June 27.'},
+  {rank:12, group:'I', team:'Senegal', flag:'🇸🇳', pts:0, gd:-3, gf:3, status:'out', note:'Group I finished. Eliminated with 0 points.'},
+];
+
+const statusMap = {
+  final: {cls:'st-final', label:'Locked in'},
+  live: {cls:'st-live', label:'Just finished'},
+  pending: {cls:'st-pending', label:'Fixture left'},
+  out: {cls:'st-out', label:'Eliminated'},
+};
+
+const tbody = document.getElementById('tp-body');
+data.forEach(d => {
+  const tr = document.createElement('tr');
+  if(d.highlight) tr.classList.add('kr-row');
+  const s = d.justMoved ? statusMap.live : statusMap[d.status];
+  tr.innerHTML = `
+    <td><span class="rank-num">${d.rank}</span></td>
+    <td>
+      <div class="team-cell">
+        <span class="flag">${d.flag}</span>
+        <div>
+          <div class="team-name">${d.team}</div>
+          <div class="group-tag">Group ${d.group}</div>
+        </div>
+      </div>
+    </td>
+    <td class="num" style="font-family:var(--mono);font-weight:700;">${d.pts}</td>
+    <td class="num" style="font-family:var(--mono);">${d.gd>0?'+':''}${d.gd}</td>
+    <td class="num" style="font-family:var(--mono);">${d.gf}</td>
+    <td><span class="status-chip ${s.cls}">${s.label}</span></td>
+  `;
+  tbody.appendChild(tr);
+  if(d.rank === 8){
+    const cutoffTr = document.createElement('tr');
+    cutoffTr.classList.add('cutoff-row');
+    cutoffTr.innerHTML = `<td colspan="6" class="cutoff-label">qualification line &mdash; top 8 advance to round of 32</td>`;
+    tbody.appendChild(cutoffTr);
+  }
+});
+
+const threats = [
+  {fixture:'Just played', team:'Sweden', flag:'🇸🇪', note:'Drew with Japan, finished on 4 points. Already passed Korea tonight.', state:'passed'},
+  {fixture:'June 27, Group L', team:'Croatia', flag:'🇭🇷', note:'A win over Ghana puts them on 6 points, well clear of Korea.', state:'threat'},
+  {fixture:'June 26-27, Group D', team:'Paraguay', flag:'🇵🇾', note:'Currently tied with Korea on points but behind on goal difference (-2 vs -1). A win moves them clear.', state:'tied'},
+  {fixture:'June 27, Group J', team:'Algeria', flag:'🇩🇿', note:'Same situation as Paraguay: 3 points, -2 GD, needs a big win to leapfrog.', state:'tied'},
+  {fixture:'June 26, Group H', team:'Cape Verde', flag:'🇨🇻', note:'On 2 points now. Would need a win and favorable other results to threaten the top 8.', state:'longshot'},
+];
+
+const threatsBody = document.getElementById('threats-body');
+threats.forEach(t => {
+  const div = document.createElement('div');
+  div.className = 'threat';
+  div.innerHTML = `
+    <div class="threat-fixture">${t.fixture}</div>
+    <div>
+      <div class="threat-team"><span class="flag">${t.flag}</span>${t.team}</div>
+      <div class="threat-note">${t.note}</div>
+    </div>
+  `;
+  threatsBody.appendChild(div);
+});
+</script>
+
+</body>
+</html>
